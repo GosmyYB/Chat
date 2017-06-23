@@ -4,11 +4,13 @@ import com.wyb.demo.async.EventConsumer;
 import com.wyb.demo.async.EventModel;
 import com.wyb.demo.async.EventProducer;
 import com.wyb.demo.async.EventType;
-import com.wyb.demo.async.handler.SendMessageHandler;
+import com.wyb.demo.async.handler.BroadcastMessageHandler;
 import com.wyb.demo.model.Client;
 import com.wyb.demo.model.Message;
+import com.wyb.demo.util.Constant;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
-import java.awt.*;
 import java.io.IOException;
 import java.net.ServerSocket;
 import java.net.Socket;
@@ -18,11 +20,16 @@ import java.util.List;
 import java.util.concurrent.*;
 
 /**
+ * 聊天室服务器
  * Created by wyb.
  */
 public class ChatServer {
 
-    // 利用 CopyOnWriteArrayList 解决List 的同步问题
+    private static final Logger logger = LoggerFactory.getLogger(ChatServer.class);
+
+    /**
+     * 客户列表
+     */
     private List<Client> clients = new CopyOnWriteArrayList<>();
 
     /**
@@ -30,47 +37,67 @@ public class ChatServer {
      */
     private ExecutorService pool = Executors.newCachedThreadPool();
 
+    /**
+     * 定时清除客户端连接线程
+     */
     private ScheduledExecutorService autoClearService = Executors.newSingleThreadScheduledExecutor();
+    /**
+     * 清理客户的间隔时间
+     */
+    private static final int AUTO_CLEAN_INTERVAL = 3;
 
+    /**
+     * 可用标记位
+     */
     private boolean isRunning;
 
+    /**
+     * 程序入口
+     * @param args
+     * @throws IOException
+     */
     public static void main(String[] args) throws IOException {
         BlockingQueue<EventModel> queue = new LinkedBlockingDeque<>();
         EventProducer.getInstance().setQueue(queue);
         EventConsumer.getInstance()
                 .setQueue(queue)
-                .register(new SendMessageHandler())
+                .register(new BroadcastMessageHandler())
                 .consume();
 
-        System.out.println("Server is starting...");
+        logger.info("Server is starting...");
         new ChatServer().start();
     }
 
-
+    /**
+     * 启动服务器
+     * @throws IOException
+     */
     public void start() throws IOException {
         isRunning = true;
         // 定期清除任务
-        autoClearService.scheduleWithFixedDelay(new AutoClearClientTask(), 20, 20, TimeUnit.SECONDS);
+        autoClearService.scheduleWithFixedDelay(new AutoClearClientTask(), 3, AUTO_CLEAN_INTERVAL, TimeUnit.SECONDS);
 
         ServerSocket server = new ServerSocket(8888);
-        System.out.println("Server is running...");
+        logger.info("Server is running...");
         while (isRunning) {
             Socket clientSocket = server.accept();
             Client client = new Client(clientSocket);
             clients.add(client);
-            // 交给线程池处理
+            // 交给线程池处理.
             pool.submit(new ClientHandler(client));
-            System.out.println("A client has entered");
+            logger.info("Client: " + client.getSocket() + " has entered");
         }
     }
 
-    // 将消息发送给非发送者的Client
+    /**
+     * 同步地广播接收到的消息。
+     * 已改用异步消息队列处理.
+     * @param message
+     * @param except
+     */
+    @Deprecated
     private synchronized void broadcastMessage(Message message, Client except) {
         for (Client client : clients) {
-//            // 发送者不需要被广播
-//            if (client == null || client == except || !client.available()) {
-//                continue;
-//            }
             try {
                 client.sendMessage(message);
             } catch (IOException ex) {
@@ -80,7 +107,8 @@ public class ChatServer {
     }
 
     /**
-     * 负责处理 一个客户端的请求
+     * 客户端处理类
+     * 每个对象为一个客户端服务
      */
     class ClientHandler implements Runnable {
 
@@ -96,19 +124,22 @@ public class ChatServer {
                 while (client.available()) {
                     // 持续读取 客户端信息
                     Message message = (Message) client.getInput().readObject();
-                    System.out.println(message);
+                    logger.info(message.toString());
 
-                    // 将消息广播
-                    // broadcastMessage(message, client);
-
+                    String body = message.getBody();
+                    // 接收到断开连接消息
+                    if (Constant.DISCONNECT_MSG.equals(body)) {
+                        clients.remove(client);
+                        client.close();
+                        break;
+                    }
                     // 创建事件
                     EventModel event = new EventModel();
-                    event.setEventType(EventType.SEND_MESSAGE)
+                    event.setEventType(EventType.BROADCAST_MESSAGE)
                             .setMessage(message)
                             .setClients(new ArrayList<>(clients));
                     // 将事件交给消息队列处理
                     EventProducer.getInstance().fireEvent(event);
-
                 }
             } catch (IOException e) {
             } catch (ClassNotFoundException e) {
@@ -126,10 +157,10 @@ public class ChatServer {
     class AutoClearClientTask implements Runnable {
         @Override
         public void run() {
-            System.out.println("Begin to remove disconnected clients");
             List<Client> toRemove = new LinkedList<>();
             for (Client client : clients) {
-                if (client == null || !client.available()) {
+                if (!client.available()) {
+                    logger.info("Removing client" + client.getSocket().getInetAddress());
                     toRemove.add(client);
                 }
             }

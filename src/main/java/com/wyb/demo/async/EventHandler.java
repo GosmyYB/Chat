@@ -3,6 +3,7 @@ package com.wyb.demo.async;
 import java.util.List;
 
 /**
+ * 事件处理器
  * Created by wyb
  */
 public interface EventHandler {
@@ -15,8 +16,8 @@ public interface EventHandler {
 
 
     /**
-     * 支持处理的事件
-     * @return
+     * 返回该处理器可处理的事件
+     * @return 事件类型列表
      */
     List<EventType> getSupportEventTypes();
 

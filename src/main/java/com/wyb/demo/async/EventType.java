@@ -1,12 +1,19 @@
 package com.wyb.demo.async;
 
 /**
+ * 事件类型
  * Created by wyb
  */
 public enum EventType {
 
-    SEND_MESSAGE(0); // 构造了一个枚举对象
+    /**
+     * 广播消息
+     */
+    BROADCAST_MESSAGE(0);
 
+    /**
+     * 枚举对象包含的值
+     */
     private int value;
 
     private EventType(int value) {

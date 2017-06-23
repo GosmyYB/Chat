@@ -1,13 +1,17 @@
 package com.wyb.demo.async;
 
-import com.wyb.demo.model.Message;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.util.concurrent.BlockingQueue;
 
 /**
+ * 事件生产者，负责将事件提交到事件队列。
  * Created by wyb
  */
 public class EventProducer {
+
+    private static final Logger logger = LoggerFactory.getLogger(EventConsumer.class);
 
     private static final EventProducer instance = new EventProducer();
 
@@ -25,14 +29,14 @@ public class EventProducer {
     }
 
     /**
-     * 发送事件到消息队列
+     * 将事件提交到消息队列
      * @param event
      */
     public void fireEvent(EventModel event) {
         try {
             queue.put(event);
         } catch (Exception e) {
-            e.getMessage();
+            logger.error(e.getMessage());
         }
     }
 }

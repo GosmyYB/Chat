@@ -13,16 +13,25 @@ import java.util.concurrent.ConcurrentHashMap;
  */
 public class EventModel {
 
+    /**
+     * 事件类型
+     */
     private EventType eventType;
 
-    // to clients
+    /**
+     * 接收消息的客户列表
+     */
     private List<Client> clients;
 
+    /**
+     * 消息
+     */
     private Message message;
 
-    // 扩展字段
+    /**
+     * 扩展字段
+     */
     private Map<String, Object> extents = new ConcurrentHashMap<>();
-
 
     public EventType getEventType() {
         return eventType;

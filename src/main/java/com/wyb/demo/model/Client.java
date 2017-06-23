@@ -15,8 +15,7 @@ public class Client implements Closeable {
     private ObjectInputStream input;
     private ObjectOutputStream output;
 
-    private boolean isRunning;
-
+    private volatile boolean isRunning;
 
     public Client(Socket socket) {
         try {

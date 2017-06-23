@@ -5,35 +5,40 @@ import com.wyb.demo.async.EventModel;
 import com.wyb.demo.async.EventType;
 import com.wyb.demo.model.Client;
 import com.wyb.demo.model.Message;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.util.Arrays;
 import java.util.List;
 
 /**
+ * 负责将消息广播给所有客户
  * Created by wyb
  */
-public class SendMessageHandler implements EventHandler {
+public class BroadcastMessageHandler implements EventHandler {
+
+    private static final Logger logger = LoggerFactory.getLogger(BroadcastMessageHandler.class);
 
     @Override
     public void doHandler(EventModel event) {
-        sendMessage(event);
-        System.out.println(Thread.currentThread().getName() + " has sent message");
+        broadcast(event);
+        logger.info(Thread.currentThread().getName() + " has sent message");
     }
 
     /**
-     * 发送消息
+     * 广播消息
      *
      * @param event
      */
-    private void sendMessage(EventModel event) {
+    private void broadcast(EventModel event) {
         Message message = event.getMessage();
         List<Client> clients = event.getClients();
         for (Client client : clients) {
             try {
                 client.getOutput().writeObject(message);
             } catch (IOException e) {
-                e.printStackTrace();
+                logger.error(e.getMessage());
                 continue;
             }
         }
@@ -41,6 +46,6 @@ public class SendMessageHandler implements EventHandler {
 
     @Override
     public List<EventType> getSupportEventTypes() {
-        return Arrays.asList(EventType.SEND_MESSAGE);
+        return Arrays.asList(EventType.BROADCAST_MESSAGE);
     }
 }

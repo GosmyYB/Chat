@@ -1,5 +1,8 @@
 package com.wyb.demo.async;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -9,9 +12,12 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
 /**
+ * 事件消费者，负责从任务队列获取事件，交给相应的处理器处理
  * Created by wyb
  */
 public class EventConsumer {
+
+    private static final Logger logger = LoggerFactory.getLogger(EventConsumer.class);
 
     private static final EventConsumer instance = new EventConsumer();
 
@@ -38,6 +44,8 @@ public class EventConsumer {
 
     /**
      * 注册 EventHandler
+     * @param handler
+     * @return EventConsumer  为了使用链式编程
      */
     public EventConsumer register(EventHandler handler) {
         List<EventType> eventTypes =  handler.getSupportEventTypes();
@@ -66,7 +74,7 @@ public class EventConsumer {
                             executorService.submit(new Task(event, handler));
                         }
                     } catch (Exception e) {
-                        e.printStackTrace();
+                        logger.error(e.getMessage());
                     }
                 }
             }
@@ -74,7 +82,10 @@ public class EventConsumer {
         thread.start();
     }
 
-    // 将 handler 和  event  封装成一个 task
+    /**
+     * 事件任务
+     * 将 handler 和 event 封装成一个 task 以便用交给线程池处理
+     */
     private class Task implements Runnable {
         private EventModel event;
         private EventHandler handler;
