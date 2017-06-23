@@ -1,4 +1,4 @@
 
 ## Screenshot
 
-![Two Clients chatting](screenshot/chat.png)
+![Two_Clients_chatting](screenshot/chat.png)
